@@ -13,16 +13,16 @@
     "<all_urls>"
   ],
   "icons": {
-    "16": "assets/cypress-icon.webp",
-    "48": "assets/cypress-icon.webp",
-    "128": "assets/cypress-icon.webp"
+    "16": "assets/icon16.png",
+    "48": "assets/icon48.png",
+    "128": "assets/icon128.png"
   },
   "action": {
     "default_title": "QA Selector Helper",
     "default_icon": {
-        "16": "assets/cypress-icon.webp",
-        "48": "assets/cypress-icon.webp",
-        "128": "assets/cypress-icon.webp"
+        "16": "assets/icon16.png",
+        "48": "assets/icon48.png",
+        "128": "assets/icon128.png"
     }
   },
   "side_panel": {

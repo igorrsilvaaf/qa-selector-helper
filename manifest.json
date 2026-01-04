@@ -1,0 +1,47 @@
+{
+  "manifest_version": 3,
+  "name": "QA Selector Helper",
+  "version": "1.0",
+  "description": "Gera seletores Cypress e Playwright para testes automatizados.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "sidePanel"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "icons": {
+    "16": "assets/cypress-icon.webp",
+    "48": "assets/cypress-icon.webp",
+    "128": "assets/cypress-icon.webp"
+  },
+  "action": {
+    "default_title": "QA Selector Helper",
+    "default_icon": {
+        "16": "assets/cypress-icon.webp",
+        "48": "assets/cypress-icon.webp",
+        "128": "assets/cypress-icon.webp"
+    }
+  },
+  "side_panel": {
+    "default_path": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_end"
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "qa-selector-helper@example.com",
+      "strict_min_version": "109.0"
+    }
+  }
+}

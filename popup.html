@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QA Selector Helper</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app-container">
+    
+    <!-- Header: Title + Theme Toggle -->
+    <header>
+      <div class="brand">
+        <span class="brand-icon">🎯</span>
+        <h1>QA Helper</h1>
+      </div>
+      <button id="themeToggle" class="icon-btn" title="Alternar Tema (Light/Dark)">
+        <!-- Sun Icon (Default) -->
+        <svg class="sun-icon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+        <!-- Moon Icon (Hidden by default) -->
+        <svg class="moon-icon" viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display:none;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+    </header>
+
+    <main>
+      <!-- Controls Bar: Framework | Inspect Switch -->
+      <div class="controls-bar">
+        <div class="select-wrapper">
+            <select id="frameworkSelect" class="modern-select">
+              <option value="cypress">Cypress</option>
+              <option value="playwright">Playwright</option>
+            </select>
+        </div>
+        
+        <div class="toggle-wrapper" title="Ativar Modo de Inspeção">
+            <label class="toggle-switch">
+              <input type="checkbox" id="inspectToggle">
+              <span class="slider round"></span>
+            </label>
+            <span class="toggle-label">Inspecionar</span>
+        </div>
+      </div>
+
+      <!-- Results Area -->
+      <div class="result-area">
+        <div class="section-header">
+            <span class="section-title">Elementos Encontrados</span>
+            <span class="badge-count" id="countBadge" style="display:none">0</span>
+        </div>
+        
+        <div id="selectorList" class="selector-list">
+          <div class="empty-state">
+            <div class="empty-icon">👆</div>
+            <p>Ative "Inspecionar" e clique em um elemento na página.</p>
+          </div>
+        </div>
+        
+        <div class="section-header" style="margin-top: 15px;">
+            <span class="section-title">Seletor Final</span>
+        </div>
+        <textarea id="selectorResult" readonly placeholder="O código pronto aparecerá aqui..."></textarea>
+      </div>
+
+      <!-- Actions Footer -->
+      <div class="button-row">
+        <button id="clearBtn" class="secondary-btn" title="Limpar tudo">
+          Limpar
+        </button>
+        <button id="copyBtn" class="action-btn">
+          <span>Copiar</span>
+          <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-left:5px"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
+      </div>
+
+      <div id="statusMessage" class="status-msg"></div>
+    </main>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

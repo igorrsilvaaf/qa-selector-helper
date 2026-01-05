@@ -12,7 +12,7 @@
     <!-- Header: Title + Theme Toggle -->
     <header>
       <div class="brand">
-        <span class="brand-icon">🎯</span>
+        <img src="assets/Alvo.png" class="brand-icon" alt="QA Helper Logo" style="width: 24px; height: 24px;">
         <h1>QA Helper</h1>
       </div>
       <button id="themeToggle" class="icon-btn" title="Alternar Tema (Light/Dark)">
@@ -32,10 +32,6 @@
               <option value="playwright">Playwright</option>
             </select>
         </div>
-        
-        <button id="unlockBtn" class="icon-btn secondary-btn" title="Destravar / Capturar Novo" style="display:none; margin-right: 8px;">
-            🔓
-        </button>
 
         <div class="toggle-wrapper" title="Ativar Modo de Inspeção">
             <label class="toggle-switch">
@@ -46,17 +42,16 @@
         </div>
       </div>
       
-      <!-- Tabs -->
-      <div class="tabs">
-          <button class="tab-btn active" data-tab="capture">Capturar</button>
-          <button class="tab-btn" data-tab="history">Histórico</button>
-      </div>
-
       <!-- Results Area (Capture Tab) -->
-      <div id="captureTab" class="tab-content active result-area">
+      <div id="captureTab" class="result-area">
         <div class="section-header">
-            <span class="section-title">Elementos Encontrados</span>
-            <span class="badge-count" id="countBadge" style="display:none">0</span>
+            <div class="section-title-wrapper">
+                <span class="section-title">Elementos Encontrados</span>
+                <span class="badge-count" id="countBadge" style="display:none">0</span>
+            </div>
+            <button id="clearBtn" class="icon-btn-small" title="Limpar tudo">
+               <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
         </div>
         
         <div id="selectorList" class="selector-list">
@@ -72,22 +67,14 @@
         <textarea id="selectorResult" readonly placeholder="O código pronto aparecerá aqui..."></textarea>
       </div>
 
-      <!-- History Tab -->
-      <div id="historyTab" class="tab-content result-area" style="display:none">
-          <div id="historyList" class="selector-list">
-             <div class="empty-state">
-                <div class="empty-icon">🕒</div>
-                <p>Nenhum histórico recente.</p>
-             </div>
-          </div>
-          <button id="clearHistoryBtn" class="secondary-btn" style="margin-top: 10px;">Limpar Histórico</button>
-      </div>
-
       <!-- Actions Footer -->
       <div class="button-row">
-        <button id="clearBtn" class="secondary-btn" title="Limpar tudo">
-          Limpar
+        <button id="reSelectBtn" class="re-select-btn" style="display:none">
+          <!-- Crosshair / Target Icon -->
+          <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" class="btn-icon"><circle cx="12" cy="12" r="10"></circle><line x1="22" y1="12" x2="18" y2="12"></line><line x1="6" y1="12" x2="2" y2="12"></line><line x1="12" y1="6" x2="12" y2="2"></line><line x1="12" y1="22" x2="12" y2="18"></line></svg>
+          Re-Select
         </button>
+
         <button id="copyBtn" class="action-btn">
           <span>Copiar</span>
           <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-left:5px"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>

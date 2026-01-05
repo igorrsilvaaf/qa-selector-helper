@@ -9,14 +9,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const sunIcon = document.querySelector('.sun-icon');
   const moonIcon = document.querySelector('.moon-icon');
   
-  // Tabs
-  const tabBtns = document.querySelectorAll('.tab-btn');
-  const tabContents = document.querySelectorAll('.tab-content');
-  const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-  const historyListContainer = document.getElementById('historyList');
+
 
   // Load State
-  chrome.storage.local.get(['inspecting', 'framework', 'lastSelector', 'selectorOptions', 'theme', 'history'], (result) => {
+  // Load State
+  // Load State
+  chrome.storage.local.get(['inspecting', 'framework', 'lastSelector', 'selectorOptions', 'theme'], (result) => {
     inspectToggle.checked = !!result.inspecting;
     if (result.framework) {
       frameworkSelect.value = result.framework;
@@ -26,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (result.selectorOptions) {
         updateSelectorList(result.selectorOptions);
+        updateReSelectButton(result.inspecting); // Initial check
     }
     // Theme
     if (result.theme === 'dark') {
@@ -35,48 +34,39 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.removeAttribute('data-theme');
         updateThemeIcons('light');
     }
-    // History
-    updateHistoryList(result.history || []);
   });
 
   // Tab Switching
-  tabBtns.forEach(btn => {
-      btn.addEventListener('click', () => {
-          // Deactivate all
-          tabBtns.forEach(b => b.classList.remove('active'));
-          tabContents.forEach(c => c.classList.remove('active')); 
-          
-          // Activate clicked
-          btn.classList.add('active');
-          const tabId = btn.getAttribute('data-tab');
-          document.getElementById(tabId + 'Tab').classList.add('active');
-      });
-  });
 
-  const unlockBtn = document.getElementById('unlockBtn'); // New button
+
+  const reSelectBtn = document.getElementById('reSelectBtn'); // New Re-Select button
 
   inspectToggle.addEventListener('change', () => {
     const isInspecting = inspectToggle.checked;
     chrome.storage.local.set({ inspecting: isInspecting });
     sendMessageToContentScript({ action: 'toggleBox', value: isInspecting });
-    updateUnlockButton(isInspecting);
+    updateReSelectButton(isInspecting);
   });
   
-  // Logic for Unlock Button
-  unlockBtn.addEventListener('click', () => {
-      // "Unlock" means turn Inspection ON again
+  // Logic for Re-Select Button
+  reSelectBtn.addEventListener('click', () => {
+      // Turn Inspection ON again
       inspectToggle.checked = true;
       inspectToggle.dispatchEvent(new Event('change')); // Trigger change listener
   });
 
-  function updateUnlockButton(isInspecting) {
-      // If we are inspecting, we don't need unlock button (button is for locked state)
-      // If we are NOT inspecting (Locked), show button to help user
-      // BUT only if we have a result? Simpler: Show button if !isInspecting
+  function updateReSelectButton(isInspecting) {
+      // If we are inspecting, hide button (or show Cancel?)
+      // If Locked (not inspecting) AND we have options, show Re-Select
       if (!isInspecting && selectorResult.value) {
-          unlockBtn.style.display = 'flex';
+          reSelectBtn.style.display = 'flex';
+          copyBtn.style.display = 'flex'; // Ensure copy is visible
+      } else if (isInspecting) {
+         // While inspecting, maybe hide Re-Select?
+         reSelectBtn.style.display = 'none';
       } else {
-          unlockBtn.style.display = 'none';
+         // Empty state, not inspecting
+         reSelectBtn.style.display = 'none';
       }
   }
 
@@ -109,7 +99,6 @@ document.addEventListener('DOMContentLoaded', () => {
     chrome.storage.local.set({ framework: framework });
     // Update both lists to reflect framework change
     if (currentOptions.length > 0) selectOption(selectedIndex);
-    chrome.storage.local.get(['history'], (res) => updateHistoryList(res.history || []));
   });
 
   copyBtn.addEventListener('click', () => {
@@ -121,64 +110,45 @@ document.addEventListener('DOMContentLoaded', () => {
       showStatus('Limpo!');
   });
   
-  clearHistoryBtn.addEventListener('click', () => {
-      chrome.storage.local.set({ history: [] }, () => {
-          updateHistoryList([]);
-          showStatus('Histórico limpo!');
-      });
-  });
+
 
   function clearState() {
       chrome.storage.local.remove(['selectorOptions', 'lastSelector']);
-  }
-  
-  function addToHistory(selectorData) {
-      chrome.storage.local.get(['history'], (result) => {
-          let history = result.history || [];
-          
-          // Debugging / Logic check:
-          // If the top of history is ALREADY this element (by value), do nothing?
-          // But user might want to re-add it? 
-          // For now, avoid immediate duplicates if they are identical.
-          if (history.length > 0 && history[0].value === selectorData.value) {
-              return; 
-          }
-
-          history.unshift(selectorData); // Add to top
-          if (history.length > 50) history.pop(); // Keep max 50
-          chrome.storage.local.set({ history: history });
-          updateHistoryList(history);
-      });
+      selectorResult.value = '';
+      updateSelectorList([]); // Clear UI list
+      updateReSelectButton(inspectToggle.checked);
   }
 
+  // Ensure inspection stops when the extension window/panel is closed
+  window.addEventListener('unload', () => {
+       chrome.storage.local.set({ inspecting: false });
+  });
+  // Handle Auto-Lock when a new selector is captured
   // Handle Auto-Lock when a new selector is captured
   chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local') {
+      
+      // Check for new capture
       if (changes.selectorOptions) {
+        // Determine options
         const options = changes.selectorOptions.newValue || [];
+
         updateSelectorList(options);
-        
+             
+        // Auto-Lock UI Feedback
         if (options.length > 0) {
-            // New capture -> Add best option to history
-            addToHistory(options[0]);
-            
-            // AUTO-LOCK RESTORED: User WANTS the lock.
-            // He wants to click -> lock (inspect off) -> see dotted border.
-            // To unlock, he will click a new "Unlock" button or toggle inspect again.
-            if (inspectToggle.checked) {
-                inspectToggle.checked = false;
-                chrome.storage.local.set({ inspecting: false });
-                sendMessageToContentScript({ action: 'toggleBox', value: false });
-                showStatus('Travado! (Destrave para capturar outro)');
-            }
+           if (inspectToggle.checked) {
+              inspectToggle.checked = false;
+              chrome.storage.local.set({ inspecting: false });
+              sendMessageToContentScript({ action: 'toggleBox', value: false });
+              showStatus('Travado! (Destrave para capturar outro)');
+           }
         }
       }
+
       if (changes.inspecting) {
         inspectToggle.checked = changes.inspecting.newValue;
-        updateUnlockButton(changes.inspecting.newValue); // Update button state
-      }
-      if (changes.history) {
-          updateHistoryList(changes.history.newValue || []);
+        updateReSelectButton(changes.inspecting.newValue); // Update button state
       }
     }
   });
@@ -190,6 +160,9 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateSelectorList(options) {
       currentOptions = options;
       selectorListContainer.innerHTML = '';
+      
+      // Update button visibility based on whether we have content
+      updateReSelectButton(inspectToggle.checked);
       
       if (options.length === 0) {
           selectorListContainer.innerHTML = '<div class="empty-state"><div class="empty-icon">👆</div><p>Ative "Inspecionar" e clique em um elemento.</p></div>';
@@ -206,18 +179,7 @@ document.addEventListener('DOMContentLoaded', () => {
       showStatus('Opções atualizadas!');
   }
   
-  function updateHistoryList(history) {
-      historyListContainer.innerHTML = '';
-      if (history.length === 0) {
-          historyListContainer.innerHTML = '<div class="empty-state"><div class="empty-icon">🕒</div><p>Nenhum histórico recente.</p></div>';
-          return;
-      }
-      
-      history.forEach((opt, index) => {
-          const item = createSelectorItem(opt, index, false); 
-          historyListContainer.appendChild(item);
-      });
-  }
+
   
   function createSelectorItem(opt, index, isMainList) {
       const item = document.createElement('div');
@@ -267,17 +229,10 @@ document.addEventListener('DOMContentLoaded', () => {
            sendMessageToContentScript({ action: 'highlightSelector', value: null });
       });
 
-      if (isMainList) {
-          item.addEventListener('click', () => {
-              selectOption(index);
-          });
-      } else {
-          item.addEventListener('click', () => {
-               const frame = frameworkSelect.value;
-               const code = formatForFramework(opt, frame);
-               copyTextToClipboard(code);
-          });
-      }
+      // Always selectable now that history is gone
+      item.addEventListener('click', () => {
+          selectOption(index);
+      });
 
       return item;
   }
@@ -295,20 +250,6 @@ document.addEventListener('DOMContentLoaded', () => {
           const selectedOpt = currentOptions[index];
           const framework = frameworkSelect.value;
           selectorResult.value = formatForFramework(selectedOpt, framework);
-
-          // SMART HISTORY: Update the TOP of history to reflect this specific choice
-          chrome.storage.local.get(['history'], (result) => {
-              let history = result.history || [];
-              if (history.length > 0) {
-                   // Only update if the top history item belongs to the same "set" of options
-                   // We assume the user is refining the *latest* capture.
-                   // A safe check: is the top history item one of the currentOptions?
-                   // Or simply: Does the top item have same validation/value? 
-                   // Let's just blindly update top for now as it's the "active session".
-                   history[0] = selectedOpt;
-                   chrome.storage.local.set({ history: history });
-              }
-          });
       }
   }
   

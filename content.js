@@ -272,7 +272,8 @@ function handleClick(e) {
   chrome.storage.local.set({
     inspecting: false,
     lastSelector: formattedCode,
-    selectorOptions: serializableCandidates
+    selectorOptions: serializableCandidates,
+    captureTimestamp: Date.now()
   }, () => {
     // We manually update state here to ensure listeners are removed NOW
     updateInspectorState();

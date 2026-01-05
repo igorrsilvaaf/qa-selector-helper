@@ -34,6 +34,39 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'toggleBox') {
     isInspecting = request.value;
     updateInspectorState();
+  } else if (request.action === 'highlightSelector') {
+    const selector = request.value;
+    if (!selector) {
+        // If we clear the highlight (mouse leave list), but we are effectively "LOCKED" (inspecting=false && lastTarget),
+        // we should restore the lock unique to the lastTarget
+        if (!isInspecting && lastTarget) {
+            highlightElement(lastTarget, false, true);
+        } else {
+            removeOverlay();
+        }
+        return;
+    }
+    
+    try {
+        const el = document.querySelector(selector);
+        if (el) {
+            highlightElement(el, true);
+        } else {
+            // Invalid selector valid? Fallback logic if needed, else remove
+             if (!isInspecting && lastTarget) {
+                 highlightElement(lastTarget, false, true);
+             } else {
+                 removeOverlay();
+             }
+        }
+    } catch (e) {
+        console.error('Invalid selector for highlight:', selector);
+        if (!isInspecting && lastTarget) {
+             highlightElement(lastTarget, false, true);
+        } else {
+             removeOverlay();
+        }
+    }
   }
 });
 
@@ -60,7 +93,13 @@ function updateInspectorState() {
     document.removeEventListener('mouseover', handleMouseOver, true);
     document.removeEventListener('mouseout', handleMouseOut, true);
     document.removeEventListener('click', handleClick, true);
-    removeOverlay();
+    
+    // VISUAL LOCK: If we stopped inspecting but have a target, show it as LOCKED (dotted)
+    if (lastTarget) {
+        highlightElement(lastTarget, false, true); // true = isLocked
+    } else {
+        removeOverlay();
+    }
   }
 }
 
@@ -144,7 +183,7 @@ function handleMouseOut(e) {
   if (overlayElement) overlayElement.style.display = 'none';
 }
 
-function highlightElement(el) {
+function highlightElement(el, isValidation = false, isLocked = false) {
   if (!isExtensionValid()) return;
   if (!overlayElement) createOverlay();
   
@@ -158,15 +197,33 @@ function highlightElement(el) {
   overlayElement.style.left = (rect.left + scrollLeft) + 'px';
   overlayElement.style.display = 'block';
 
+  if (isValidation) {
+      overlayElement.style.border = '2px solid #2196f3';
+      overlayElement.style.backgroundColor = 'rgba(33, 150, 243, 0.2)';
+  } else if (isLocked) {
+      // LOCKED STYLE: Red Dotted as requested
+      overlayElement.style.border = '3px dotted #ff0000'; 
+      overlayElement.style.backgroundColor = 'rgba(255, 0, 0, 0.05)';
+  } else {
+      overlayElement.style.border = '2px solid #ff00ff';
+      overlayElement.style.backgroundColor = 'rgba(255, 0, 255, 0.1)';
+  }
+
   const label = overlayElement.querySelector('#qa-helper-label');
   if (label) {
-      let text = el.tagName.toLowerCase();
-      if (el.id) text += `#${el.id}`;
-      else if (el.className && typeof el.className === 'string') {
-          const firstClass = el.className.split(' ')[0];
-          if(firstClass) text += `.${firstClass}`;
+      if (isValidation) {
+           label.style.backgroundColor = '#2196f3';
+           label.textContent = 'Preview';
+      } else {
+          label.style.backgroundColor = '#ff00ff';
+          let text = el.tagName.toLowerCase();
+          if (el.id) text += `#${el.id}`;
+          else if (el.className && typeof el.className === 'string') {
+              const firstClass = el.className.split(' ')[0];
+              if(firstClass) text += `.${firstClass}`;
+          }
+          label.textContent = text;
       }
-      label.textContent = text;
       
       if (rect.top < 25) {
           label.style.top = '100%';
@@ -205,25 +262,36 @@ function handleClick(e) {
   const serializableCandidates = selectorCandidates.map(c => ({
       type: c.type,
       value: c.value,
-      label: c.label
+      label: c.label,
+      uniqueSelector: c.uniqueSelector
   }));
 
+  // AUTO-LOCK: Disable inspection immediately to prevent further hovering
+  isInspecting = false;
+  // Send message to popup (if open) and update storage
   chrome.storage.local.set({
+    inspecting: false,
     lastSelector: formattedCode,
     selectorOptions: serializableCandidates
   }, () => {
-    if (overlayElement) {
-      const originalBorder = overlayElement.style.border;
-      const originalBg = overlayElement.style.backgroundColor;
+    // We manually update state here to ensure listeners are removed NOW
+    updateInspectorState();
 
-      overlayElement.style.border = '2px solid #00ff00';
-      overlayElement.style.backgroundColor = 'rgba(0, 255, 0, 0.2)';
-      
-      setTimeout(() => {
-        if (isInspecting) {
-            overlayElement.style.border = '2px solid #ff00ff';
-            overlayElement.style.backgroundColor = 'rgba(255, 0, 255, 0.1)';
-        }
+    // LOCK CONFIRMATION: Flash Green, then set to LOCKED (Dotted)
+    if (overlayElement) {
+        // Force the element to stay visible during the flash despite updateInspectorState cleanup
+        // (updateInspectorState might try to redraw/lock, but we want the Green Flash first)
+        // Since updateInspectorState calls highlightElement(locked=true), we just override the style temporarily
+        
+        overlayElement.style.border = '2px solid #00ff00';
+        overlayElement.style.backgroundColor = 'rgba(0, 255, 0, 0.2)';
+        overlayElement.style.display = 'block'; // Ensure visible
+        
+        setTimeout(() => {
+            // After flash, ensure we are in the clean "Locked" state
+            if (lastTarget) {
+                highlightElement(lastTarget, false, true); // true = isLocked
+            }
       }, 500);
     }
   });
@@ -235,9 +303,17 @@ function generateSelectors(targetElement) {
 
   console.log('[QA Helper] Gerando seletores para:', targetElement);
 
+  // Helper to ensure we have a valid CSS selector for highlighting
+  const getSafeSelector = (el) => getCssPath(el);
+
   const qaAttributes = ['data-testid', 'data-cy', 'data-test', 'data-qa', 'data-qa-id', 'data-test-id'];
 
   const addCandidate = (data) => {
+      // Ensure every candidate has a uniqueSelector for reverse highlighting
+      if (!data.uniqueSelector) {
+          data.uniqueSelector = getSafeSelector(data.element);
+      }
+      
       if (!candidates.some(c => c.value === data.value)) {
           candidates.push(data);
       }

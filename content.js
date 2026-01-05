@@ -37,8 +37,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   } else if (request.action === 'highlightSelector') {
     const selector = request.value;
     if (!selector) {
-        // If we clear the highlight (mouse leave list), but we are effectively "LOCKED" (inspecting=false && lastTarget),
-        // we should restore the lock unique to the lastTarget
         if (!isInspecting && lastTarget) {
             highlightElement(lastTarget, false, true);
         } else {
@@ -52,7 +50,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (el) {
             highlightElement(el, true);
         } else {
-            // Invalid selector valid? Fallback logic if needed, else remove
              if (!isInspecting && lastTarget) {
                  highlightElement(lastTarget, false, true);
              } else {
@@ -94,9 +91,8 @@ function updateInspectorState() {
     document.removeEventListener('mouseout', handleMouseOut, true);
     document.removeEventListener('click', handleClick, true);
     
-    // VISUAL LOCK: If we stopped inspecting but have a target, show it as LOCKED (dotted)
     if (lastTarget) {
-        highlightElement(lastTarget, false, true); // true = isLocked
+        highlightElement(lastTarget, false, true);
     } else {
         removeOverlay();
     }
@@ -201,7 +197,6 @@ function highlightElement(el, isValidation = false, isLocked = false) {
       overlayElement.style.border = '2px solid #2196f3';
       overlayElement.style.backgroundColor = 'rgba(33, 150, 243, 0.2)';
   } else if (isLocked) {
-      // LOCKED STYLE: Red Dotted as requested
       overlayElement.style.border = '3px dotted #ff0000'; 
       overlayElement.style.backgroundColor = 'rgba(255, 0, 0, 0.05)';
   } else {
@@ -266,32 +261,22 @@ function handleClick(e) {
       uniqueSelector: c.uniqueSelector
   }));
 
-  // AUTO-LOCK: Disable inspection immediately to prevent further hovering
   isInspecting = false;
-  // Send message to popup (if open) and update storage
   chrome.storage.local.set({
     inspecting: false,
     lastSelector: formattedCode,
     selectorOptions: serializableCandidates,
     captureTimestamp: Date.now()
   }, () => {
-    // We manually update state here to ensure listeners are removed NOW
     updateInspectorState();
-
-    // LOCK CONFIRMATION: Flash Green, then set to LOCKED (Dotted)
-    if (overlayElement) {
-        // Force the element to stay visible during the flash despite updateInspectorState cleanup
-        // (updateInspectorState might try to redraw/lock, but we want the Green Flash first)
-        // Since updateInspectorState calls highlightElement(locked=true), we just override the style temporarily
-        
+    if (overlayElement) {        
         overlayElement.style.border = '2px solid #00ff00';
         overlayElement.style.backgroundColor = 'rgba(0, 255, 0, 0.2)';
-        overlayElement.style.display = 'block'; // Ensure visible
+        overlayElement.style.display = 'block';
         
         setTimeout(() => {
-            // After flash, ensure we are in the clean "Locked" state
             if (lastTarget) {
-                highlightElement(lastTarget, false, true); // true = isLocked
+                highlightElement(lastTarget, false, true);
             }
       }, 500);
     }
@@ -304,13 +289,11 @@ function generateSelectors(targetElement) {
 
   console.log('[QA Helper] Gerando seletores para:', targetElement);
 
-  // Helper to ensure we have a valid CSS selector for highlighting
   const getSafeSelector = (el) => getCssPath(el);
 
   const qaAttributes = ['data-testid', 'data-cy', 'data-test', 'data-qa', 'data-qa-id', 'data-test-id'];
 
   const addCandidate = (data) => {
-      // Ensure every candidate has a uniqueSelector for reverse highlighting
       if (!data.uniqueSelector) {
           data.uniqueSelector = getSafeSelector(data.element);
       }

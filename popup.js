@@ -10,10 +10,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const moonIcon = document.querySelector('.moon-icon');
   
 
-
-  // Load State
-  // Load State
-  // Load State
   chrome.storage.local.get(['inspecting', 'framework', 'lastSelector', 'selectorOptions', 'theme'], (result) => {
     inspectToggle.checked = !!result.inspecting;
     if (result.framework) {
@@ -24,9 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (result.selectorOptions) {
         updateSelectorList(result.selectorOptions);
-        updateReSelectButton(result.inspecting); // Initial check
+        updateReSelectButton(result.inspecting);
     }
-    // Theme
     if (result.theme === 'dark') {
         document.body.setAttribute('data-theme', 'dark');
         updateThemeIcons('dark');
@@ -36,10 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Tab Switching
-
-
-  const reSelectBtn = document.getElementById('reSelectBtn'); // New Re-Select button
+  const reSelectBtn = document.getElementById('reSelectBtn');
 
   inspectToggle.addEventListener('change', () => {
     const isInspecting = inspectToggle.checked;
@@ -48,24 +40,18 @@ document.addEventListener('DOMContentLoaded', () => {
     updateReSelectButton(isInspecting);
   });
   
-  // Logic for Re-Select Button
   reSelectBtn.addEventListener('click', () => {
-      // Turn Inspection ON again
       inspectToggle.checked = true;
-      inspectToggle.dispatchEvent(new Event('change')); // Trigger change listener
+      inspectToggle.dispatchEvent(new Event('change'));
   });
 
   function updateReSelectButton(isInspecting) {
-      // If we are inspecting, hide button (or show Cancel?)
-      // If Locked (not inspecting) AND we have options, show Re-Select
       if (!isInspecting && selectorResult.value) {
           reSelectBtn.style.display = 'flex';
-          copyBtn.style.display = 'flex'; // Ensure copy is visible
+          copyBtn.style.display = 'flex';
       } else if (isInspecting) {
-         // While inspecting, maybe hide Re-Select?
          reSelectBtn.style.display = 'none';
       } else {
-         // Empty state, not inspecting
          reSelectBtn.style.display = 'none';
       }
   }
@@ -97,7 +83,6 @@ document.addEventListener('DOMContentLoaded', () => {
   frameworkSelect.addEventListener('change', () => {
     const framework = frameworkSelect.value;
     chrome.storage.local.set({ framework: framework });
-    // Update both lists to reflect framework change
     if (currentOptions.length > 0) selectOption(selectedIndex);
   });
 
@@ -115,27 +100,18 @@ document.addEventListener('DOMContentLoaded', () => {
   function clearState() {
       chrome.storage.local.remove(['selectorOptions', 'lastSelector']);
       selectorResult.value = '';
-      updateSelectorList([]); // Clear UI list
+      updateSelectorList([]);
       updateReSelectButton(inspectToggle.checked);
   }
 
-  // Ensure inspection stops when the extension window/panel is closed
   window.addEventListener('unload', () => {
-       chrome.storage.local.set({ inspecting: false });
+    chrome.storage.local.set({ inspecting: false });
   });
-  // Handle Auto-Lock when a new selector is captured
-  // Handle Auto-Lock when a new selector is captured
   chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local') {
-      
-      // Check for new capture
       if (changes.selectorOptions) {
-        // Determine options
         const options = changes.selectorOptions.newValue || [];
-
         updateSelectorList(options);
-             
-        // Auto-Lock UI Feedback
         if (options.length > 0) {
            if (inspectToggle.checked) {
               inspectToggle.checked = false;
@@ -148,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (changes.inspecting) {
         inspectToggle.checked = changes.inspecting.newValue;
-        updateReSelectButton(changes.inspecting.newValue); // Update button state
+        updateReSelectButton(changes.inspecting.newValue);
       }
     }
   });
@@ -160,8 +136,6 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateSelectorList(options) {
       currentOptions = options;
       selectorListContainer.innerHTML = '';
-      
-      // Update button visibility based on whether we have content
       updateReSelectButton(inspectToggle.checked);
       
       if (options.length === 0) {
@@ -171,7 +145,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       options.forEach((opt, index) => {
-          const item = createSelectorItem(opt, index, true); // true = selectable
+          const item = createSelectorItem(opt, index, true);
           selectorListContainer.appendChild(item);
       });
 
@@ -193,7 +167,6 @@ document.addEventListener('DOMContentLoaded', () => {
       label.className = 'selector-label';
       label.textContent = opt.label || opt.type;
 
-      // Actions (Copy)
       const actions = document.createElement('div');
       actions.className = 'selector-actions';
       
@@ -218,9 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
       valueDiv.textContent = opt.value;
       item.appendChild(valueDiv);
 
-      // Event Listeners for Interaction
       item.addEventListener('mouseenter', () => {
-          // Reverse Highlight 
           const selectorToHighlight = opt.uniqueSelector || opt.value;
           sendMessageToContentScript({ action: 'highlightSelector', value: selectorToHighlight });
       });
@@ -229,7 +200,6 @@ document.addEventListener('DOMContentLoaded', () => {
            sendMessageToContentScript({ action: 'highlightSelector', value: null });
       });
 
-      // Always selectable now that history is gone
       item.addEventListener('click', () => {
           selectOption(index);
       });
@@ -292,21 +262,16 @@ document.addEventListener('DOMContentLoaded', () => {
       const activeTab = tabs[0];
       if (activeTab?.id) {
         chrome.tabs.sendMessage(activeTab.id, message).catch(() => {
-          // If message fails, script might not be loaded. Try injecting it.
-          console.log('Content script not ready, injecting...');
           chrome.scripting.executeScript({
             target: { tabId: activeTab.id },
             files: ['content.js']
           }).then(() => {
-             // Wait a tiny bit for script to initialize
              setTimeout(() => {
                 chrome.tabs.sendMessage(activeTab.id, message).catch(e => {
-                    console.error("Retry failed", e);
                     showStatus('Erro: Recarregue a página');
                 });
              }, 100);
           }).catch(scriptErr => {
-             console.error('Failed to inject script', scriptErr);
              showStatus('Erro: Recarregue a página');
           });
         });

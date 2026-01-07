@@ -176,8 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
       copyBtn.title = "Copiar este seletor";
       copyBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          const frame = frameworkSelect.value;
-          const code = formatForFramework(opt, frame);
+          const code = getRawSelector(opt);
           copyTextToClipboard(code);
       });
       
@@ -205,6 +204,16 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
       return item;
+  }
+
+  function getRawSelector(selectorData) {
+    const { type, value } = selectorData;
+    switch (type) {
+        case 'placeholder': return `[placeholder="${value}"]`;
+        case 'alt': return `[alt="${value}"]`;
+        case 'text': return value;
+        default: return value;
+    }
   }
 
   function selectOption(index) {
